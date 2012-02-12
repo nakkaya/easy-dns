@@ -9,26 +9,14 @@
 (defn log [& args]
   (apply println "[+]" args))
 
-(defn ip []
-  (let [s (:body (client/get "http://checkip.dyndns.org/"))]
-    (second (re-find #"Address: (.*?)<" s))))
-
-(defn update-dns [url creds ip] 
-  (let [response (:body (client/get (str url ip) {:basic-auth creds}))
+(defn update-dns [url creds] 
+  (let [response (:body (client/get (str url "1.1.1.1") {:basic-auth creds}))
         stat (first (.split response "\\s"))]
     (if (= stat "NOERROR")
-      (log "DNS Update" ip)
+      (log "DNS Update")
       (do (log "Error" stat "will retry in 5 mins")
           (Thread/sleep (* 1000 60 5))
-          (update-dns url creds ip)))))
-
-(defn track-ip [interval url creds curr-ip]
-  (while true
-    (let [ip (ip)]
-      (when (not= ip @curr-ip)
-        (update-dns url creds ip)
-        (swap! curr-ip (fn [_] (identity ip))))
-      (Thread/sleep (* 1000 60 interval)))))
+          (update-dns url creds)))))
 
 (defn -main [& args]
   (with-command-line args
@@ -40,9 +28,10 @@
      [once? "Update once" false]]
     (let [interval (read-string interval)
           creds [user token]
-          url (str "https://members.easydns.com/dyn/dyndns.php?hostname=" host "&myip=")
-          curr-ip (atom (ip))]
-      (update-dns url creds @curr-ip)
+          url (str "https://members.easydns.com/dyn/dyndns.php?hostname=" host "&myip=")]
+      (update-dns url creds)
       (when (nil? once?)
-        (track-ip interval url creds curr-ip))
+        (while true
+          (Thread/sleep (* 1000 60 interval))
+          (update-dns url creds)))
       (log "Bye"))))
