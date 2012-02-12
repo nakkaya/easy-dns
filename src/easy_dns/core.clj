@@ -36,7 +36,7 @@
     [[host "Full hostname being updated"]
      [user "Username"]
      [token "Token"]
-     [interval "Update interval (mins)" "1"]
+     [interval "Update interval (mins)" "15"]
      [once? "Update once" false]]
     (let [interval (read-string interval)
           creds [user token]
