@@ -7,7 +7,8 @@
   (:require [clj-http.client :as client]))
 
 (defn log [& args]
-  (apply println "[+]" args))
+  (print "[+]" (str (java.util.Date.)) "- ")
+  (apply println args))
 
 (defn update-dns [url creds] 
   (let [response (:body (client/get (str url "1.1.1.1") {:basic-auth creds}))
@@ -29,9 +30,13 @@
     (let [interval (read-string interval)
           creds [user token]
           url (str "https://members.easydns.com/dyn/dyndns.php?hostname=" host "&myip=")]
-      (update-dns url creds)
-      (when (nil? once?)
+      (if once?
+        (update-dns url creds)
         (while true
-          (Thread/sleep (* 1000 60 interval))
-          (update-dns url creds)))
+          (try
+            (update-dns url creds)
+            (catch Exception e
+              (log "Conn Error"))
+            (finally
+             (Thread/sleep (* 1000 60 interval))))))
       (log "Bye"))))
