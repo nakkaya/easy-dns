@@ -3,7 +3,7 @@
 
 (ns easy-dns.core
   (:gen-class)
-  (:use [clojure.contrib command-line])
+  (:use [clojure.tools.cli])
   (:require [clj-http.client :as client]))
 
 (defn log [& args]
@@ -20,17 +20,24 @@
           (update-dns url creds)))))
 
 (defn -main [& args]
-  (with-command-line args
-    "EasyDNS Updater"
-    [[host "Full hostname being updated"]
-     [user "Username"]
-     [token "Token"]
-     [interval "Update interval (mins)" "15"]
-     [once? "Update once" false]]
-    (let [interval (read-string interval)
-          creds [user token]
+  (let [[opts _ banner] (cli args
+                             ["--host" "Full hostname being updated"]
+                             ["--user" "Username"]
+                             ["--token" "Token"]
+                             ["--interval" "Update interval (mins)" :default 15 :parse-fn #(Integer. %)]
+                             ["--once" "Update once" :default false :flag true]
+                             ["--help" "Show help" :default false :flag true])
+        {:keys [host user token interval once help]} opts]
+
+    (when (or help
+              (some true? (map nil? [host user token])))
+      (println "EasyDNS Updater")
+      (println banner)
+      (System/exit 0))
+
+    (let [creds [user token]
           url (str "https://members.easydns.com/dyn/dyndns.php?hostname=" host "&myip=")]
-      (if once?
+      (if once
         (update-dns url creds)
         (while true
           (try
